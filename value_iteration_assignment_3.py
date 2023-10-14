@@ -113,7 +113,7 @@ class Agent:
                 # TODO choose maximizing action
                 for a, s_a in actions_states:
                     # Apply bellman equation
-                    q += probability * (self.rewards[s] + GAMMA * self.values[s_a])
+                    q = max(probability * (self.rewards[s] + GAMMA * self.values[s_a]), q)
 
                 self.values[s] = q
 
