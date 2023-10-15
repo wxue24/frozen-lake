@@ -10,13 +10,15 @@ GAMMA = 0.9
 TEST_EPISODES = 20
 SEED = 42
 
+actions = {0: "left", 1: "down", 2: "right", 3: "up"}
+
 initialValues = dict.fromkeys(range(16), 0)
 
 initialPolicy = dict.fromkeys(range(16), "")
 
 # Set all rewards to 0 except goal to equal 1
 initialRewards = dict.fromkeys(range(16), 0)
-initialRewards[15] = 1
+initialRewards[15] = 10
 
 initialTransitions = {}
 for s in range(16):
@@ -56,17 +58,23 @@ def printTableFromDict(dict):
     for i in range(16):
         dict[i] = round(dict[i], 2)
     """Prints a table in the shape of a grid from a dictionary where the key is the state"""
-    print("{} | {} | {} | {}".format(dict[0], dict[1], dict[2], dict[3]))
-    print("{} | {} | {} | {}".format(dict[4], dict[5], dict[6], dict[7]))
-    print("{} | {} | {} | {}".format(dict[8], dict[9], dict[10], dict[11]))
-    print("{} | {} | {} | {}".format(dict[12], dict[13], dict[14], dict[15]))
+    print(f'{dict[0]:5} | {dict[1]:5} | {dict[2]:5} | {dict[3]:5}')
+    print(f'{dict[4]:5} | {dict[5]:5} | {dict[6]:5} | {dict[7]:5}')
+    print(f'{dict[8]:5} | {dict[9]:5} | {dict[10]:5} | {dict[11]:5}')
+    print(f'{dict[12]:5} | {dict[13]:5} | {dict[14]:5} | {dict[15]:5}')
+    print("")
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, env):
         self.rewards = initialRewards
         self.values = initialValues
         self.transitions = initialTransitions
+        self.policy = initialPolicy
+        self.env = env
+        self.currentReward = 0
+        self.currentRow = 0
+        self.currentCol = 0
 
     @staticmethod
     def create_env():
@@ -78,7 +86,26 @@ class Agent:
         pass
 
     def play_n_random_steps(self, count):
-        pass
+        for i in range(count):
+            random_action = self.env.action_space.sample()
+            obs, reward, terminated, truncated, info = self.env.step(random_action)
+
+            self.currentReward += (GAMMA**i) * reward
+
+            if actions[random_action] == "up":
+                self.currentRow -= 1
+            if actions[random_action] == "down":
+                self.currentRow += 1
+            if actions[random_action] == "left":
+                self.currentRow -= 1
+            if actions[random_action] == "right":
+                self.currentRow += 1
+
+            if terminated:
+                if reward == 0:
+                    self.rewards[obs] = -1
+                self.env.reset()
+                return
 
     def print_value_table(self):
         printTableFromDict(self.values)
@@ -109,30 +136,31 @@ class Agent:
 
                 probability = 1 / len(actions_states)
 
-                q = 0
-                # TODO choose maximizing action
+                q = -1
                 for a, s_a in actions_states:
                     # Apply bellman equation
-                    q = max(probability * (self.rewards[s] + GAMMA * self.values[s_a]), q)
+                    q = max(
+                        probability * (self.rewards[s] + GAMMA * self.values[s_a]), q
+                    )
 
                 self.values[s] = q
 
 
 if __name__ == "__main__":
     test_env = Agent.create_env()
-    agent = Agent()
-    agent.value_iteration()
-    agent.print_value_table()
+    agent = Agent(test_env)
 
-    iter_no = None
-    best_reward = None
+    iter_no = 0
+    best_reward = 0
     while True:
         iter_no += 1
         agent.play_n_random_steps(100)
         agent.value_iteration()
+        agent.print_value_table()
 
-        reward = None
+        reward = agent.currentReward
         if reward > best_reward:
+            best_reward = reward
             print("Best reward updated %.3f -> %.3f" % (best_reward, reward))
 
         if reward > 0.80:
