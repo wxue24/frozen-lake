@@ -57,10 +57,10 @@ def printTableFromDict(dict):
     for i in range(16):
         dict[i] = round(dict[i], 2)
     """Prints a table in the shape of a grid from a dictionary where the key is the state"""
-    print(f'{dict[0]:5} | {dict[1]:5} | {dict[2]:5} | {dict[3]:5}')
-    print(f'{dict[4]:5} | {dict[5]:5} | {dict[6]:5} | {dict[7]:5}')
-    print(f'{dict[8]:5} | {dict[9]:5} | {dict[10]:5} | {dict[11]:5}')
-    print(f'{dict[12]:5} | {dict[13]:5} | {dict[14]:5} | {dict[15]:5}')
+    print(f"{dict[0]:5} | {dict[1]:5} | {dict[2]:5} | {dict[3]:5}")
+    print(f"{dict[4]:5} | {dict[5]:5} | {dict[6]:5} | {dict[7]:5}")
+    print(f"{dict[8]:5} | {dict[9]:5} | {dict[10]:5} | {dict[11]:5}")
+    print(f"{dict[12]:5} | {dict[13]:5} | {dict[14]:5} | {dict[15]:5}")
     print("")
 
 
@@ -76,15 +76,21 @@ class Agent:
 
     @staticmethod
     def create_env():
-        env = gym.make("FrozenLake-v1", render_mode="human", is_slippery=True)
+        env = gym.make("FrozenLake-v1", render_mode="human", is_slippery=False)
         observation, info = env.reset()
         return env
 
     def update_transits_rewards(self, state, action, new_state, reward):
+        """
+        For when agent slips into an unintended state (slippery = True)
+        """
+        # Remove old (s,a) -> s_a from transitions
+        # Add new (s,a) -> s_a
         pass
 
     def play_n_random_steps(self, count):
         """Play until agent is terminated or maximize number of steps (count) has been taken"""
+        self.currentReward = 0
         for i in range(count):
             random_action = self.env.action_space.sample()
             obs, reward, terminated, truncated, info = self.env.step(random_action)
@@ -101,8 +107,9 @@ class Agent:
                 self.currentRow += 1
 
             if terminated:
+                # If agent falls into hole, update reward at that state
                 if reward == 0:
-                    self.rewards[obs] = - 10
+                    self.rewards[obs] = -10
                 self.env.reset()
                 return
 
@@ -110,10 +117,18 @@ class Agent:
         """Prints a table in the shape of a grid from a dictionary where the key is the state"""
         for i in range(16):
             self.values[i] = round(self.values[i], 2)
-        print(f'{self.values[0]:5} | {self.values[1]:5} | {self.values[2]:5} | {self.values[3]:5}')
-        print(f'{self.values[4]:5} | {self.values[5]:5} | {self.values[6]:5} | {self.values[7]:5}')
-        print(f'{self.values[8]:5} | {self.values[9]:5} | {self.values[10]:5} | {self.values[11]:5}')
-        print(f'{self.values[12]:5} | {self.values[13]:5} | {self.values[14]:5} | {self.values[15]:5}')
+        print(
+            f"{self.values[0]:5} | {self.values[1]:5} | {self.values[2]:5} | {self.values[3]:5}"
+        )
+        print(
+            f"{self.values[4]:5} | {self.values[5]:5} | {self.values[6]:5} | {self.values[7]:5}"
+        )
+        print(
+            f"{self.values[8]:5} | {self.values[9]:5} | {self.values[10]:5} | {self.values[11]:5}"
+        )
+        print(
+            f"{self.values[12]:5} | {self.values[13]:5} | {self.values[14]:5} | {self.values[15]:5}"
+        )
         print("")
 
     def extract_policy(self):
@@ -126,35 +141,29 @@ class Agent:
 
     def print_policy(self, policy):
         """Prints policy as a table"""
-        print(f'{policy[0]:5} | {policy[1]:5} | {policy[2]:5} | {policy[3]:5}')
-        print(f'{policy[4]:5} | {policy[5]:5} | {policy[6]:5} | {policy[7]:5}')
-        print(f'{policy[8]:5} | {policy[9]:5} | {policy[10]:5} | {policy[11]:5}')
-        print(f'{policy[12]:5} | {policy[13]:5} | {policy[14]:5} | {policy[15]:5}')
+        print(f"{policy[0]:5} | {policy[1]:5} | {policy[2]:5} | {policy[3]:5}")
+        print(f"{policy[4]:5} | {policy[5]:5} | {policy[6]:5} | {policy[7]:5}")
+        print(f"{policy[8]:5} | {policy[9]:5} | {policy[10]:5} | {policy[11]:5}")
+        print(f"{policy[12]:5} | {policy[13]:5} | {policy[14]:5} | {policy[15]:5}")
         print("")
-
-    def calc_action_value(self, state, action):
-        pass
 
     def select_action(self, state):
         "Returns tuple of best action and value"
-        actions_values= []
+        actions_values = []
         # determine which actions can be taken and append the action-value pair
         for a in ["up", "down", "left", "right"]:
             if (state, a) in self.transitions:
                 s_a = self.transitions[(state, a)]
                 actions_values.append((a, self.values[s_a]))
-        
+
         bestAction = None
         bestValue = 0
         for action, value in actions_values:
             if value > bestValue:
                 bestAction = action
                 bestValue = value
-        
-        return (bestAction, bestValue)
 
-    def play_episode(self, env):
-        pass
+        return (bestAction, bestValue)
 
     def value_iteration(self):
         for i in range(100):
@@ -176,27 +185,35 @@ class Agent:
 
                 self.values[s] = q
 
+    def play_episode(self):
+        agent.play_n_random_steps(100)
+        agent.value_iteration()
+
 
 if __name__ == "__main__":
     test_env = Agent.create_env()
     agent = Agent(test_env)
 
+    # Run test episodes and extract policy
+    for e in range(3):
+        agent.play_episode()
+    agent.print_value_table()
+    policy = agent.extract_policy()
+    agent.print_policy(policy)
+
     iter_no = 0
     best_reward = 0
     while True:
         iter_no += 1
-        agent.play_n_random_steps(100)
-        agent.value_iteration()
+        agent.play_episode()
         # agent.print_value_table()
-        policy = agent.extract_policy()
-        agent.print_policy(policy)
 
         reward = agent.currentReward
         if reward > best_reward:
-            best_reward = reward
             print("Best reward updated %.3f -> %.3f" % (best_reward, reward))
+            best_reward = reward
 
-        if reward > 0.80:
+        if reward > 5:
             print("Solved in %d iterations!" % iter_no)
             agent.print_value_table()
             policy = agent.extract_policy()
