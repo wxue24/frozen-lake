@@ -1,37 +1,13 @@
 import gym
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 ENV_NAME = "FrozenLake-v1"
 GAMMA = 0.9
 TEST_EPISODES = 20
 SEED = 42
-SLIPPERY = False
+SLIPPERY = True
 
 actions = {0: "left", 1: "down", 2: "right", 3: "up"}
-
-initialTransitions = {}
-for s in range(16):
-    # states order: left to right, top to bottom
-    for a in [0, 1, 2, 3]:
-        # determine state after action
-        s_a = -1
-        if a == 0:
-            s_a = s - 1
-        elif a == 1:
-            s_a = s + 4
-        elif a == 2:
-            s_a = s + 1
-        elif a == 3:
-            s_a = s - 4
-
-        # if state is out of bounds, remain unchanged
-        if s_a < 0 or s_a > 15:
-            s_a = s
-
-        # each (state,action) transitions to a post action state
-        d = defaultdict(int)
-        d[s_a] = 1
-        initialTransitions[(s, a)] = d
 
 
 class Agent:
@@ -41,23 +17,23 @@ class Agent:
         # Define state
         self.state = 0
         # Define rewards
-        self.rewards = defaultdict(int)
+        self.rewards = defaultdict(lambda: defaultdict(lambda: 0))
         # Define transits
-        self.transits = initialTransitions
+        self.transits = defaultdict(lambda: Counter())
         # Define values
         self.values = defaultdict(float)
 
     @staticmethod
     def create_env():
-        env = gym.make("FrozenLake-v1", render_mode="human", is_slippery=SLIPPERY)
-        env.reset()
+        env = gym.make("FrozenLake-v1", is_slippery=SLIPPERY)
+        env.reset(seed=SEED)
         return env
 
     def update_transits_rewards(self, state, action, new_state, reward):
         # Get the key, which is a state action pair
         key = (state, action)
         # update rewards which is accessed by key plus the new state
-        self.rewards[(key, new_state)] = reward
+        self.rewards[key][new_state] = reward
         # update transits count which is accessed by key and new_state
         self.transits[key][new_state] += 1
 
@@ -73,13 +49,13 @@ class Agent:
             # update the state
             self.state = obs
             if terminated:
-                self.env.reset()
+                self.env.reset(seed=SEED)
                 self.state = 0
 
     def print_value_table(self):
         for i in range(4):
             for j in range(4):
-                print(round(self.values[4 * i + j], 3), end=" | ")
+                print("{0: <5}".format(round(self.values[4 * i + j], 3)), end=" | ")
             print("")
         print("")
 
@@ -100,7 +76,7 @@ class Agent:
         # nested for loop to print the actions in 2d matrix format
         for i in range(4):
             for j in range(4):
-                print(actions[policy[4 * i + j]], end=" | ")
+                print("{0: <5}".format(actions[policy[4 * i + j]]), end=" | ")
             print("")
         print("")
 
@@ -116,21 +92,20 @@ class Agent:
         for s_a in counts:
             # calculate the proportion of reward plus gamma * value of the target state, then sum it all together.
             proportion = counts[s_a] / total_count
-            sum += proportion + GAMMA * self.values[s_a]
+            sum += proportion * (
+                self.rewards[(state, action)][s_a] + GAMMA * self.values[s_a]
+            )
         # return that sum
-        # print((state, actions[action], counts, sum))
-
         return sum
 
     def select_action(self, state):
         # define best action and best value
-        best_action = 0
-        best_value = 0
+        best_action = -1
+        best_value = -1
         # For action in the range of actions
         for action in range(4):
             # calculate the action value
             value = self.calc_action_value(state, action)
-            print(actions[action], value)
             # if best value is less than action value
             if best_value < value:
                 # update best value and best action
@@ -140,7 +115,7 @@ class Agent:
         return best_action
 
     def play_episode(self, env):
-        env.reset()
+        env.reset(seed=SEED)
         # define reward and state
         reward = 0
         state = 0
@@ -148,25 +123,13 @@ class Agent:
         while True:
             # select an action
             action = self.select_action(state)
-            print(actions[action])
             # take a step
             obs, r, terminated, truncated, info = env.step(action)
-            
-            # state = obs
-            # reward += r
-            # if terminated:
-            #     return reward
-            # if state is multiple
-            
-            # update reward
-            # update count
-            # else
-            # update reward
-            # update count
-            # update total reward
-            # get out if we're done
-            # set state to new state
-            # return total reward
+
+            state = obs
+            reward += r
+            if terminated or truncated:
+                return reward
 
     def value_iteration(self):
         # for each state
@@ -185,15 +148,12 @@ if __name__ == "__main__":
     best_reward = 0
     while True:
         iter_no += 1
-        print("Iteration {}".format(iter_no))
-        agent.play_n_random_steps(20)
+        agent.play_n_random_steps(100)
         agent.value_iteration()
-        agent.print_value_table()
 
         reward = 0  # sum of play episode for all 20 episodes / number of episodes
         for i in range(TEST_EPISODES):
             reward += agent.play_episode(test_env)
-            print("Test Episode {}: Reward {}".format(i, reward))
         reward /= TEST_EPISODES
 
         if reward > best_reward:
