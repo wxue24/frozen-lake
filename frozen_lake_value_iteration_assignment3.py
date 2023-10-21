@@ -26,7 +26,7 @@ class Agent:
     @staticmethod
     def create_env():
         env = gym.make("FrozenLake-v1", is_slippery=SLIPPERY)
-        env.reset(seed=SEED)
+        env.reset()
         return env
 
     def update_transits_rewards(self, state, action, new_state, reward):
@@ -49,7 +49,7 @@ class Agent:
             # update the state
             self.state = obs
             if terminated:
-                self.env.reset(seed=SEED)
+                self.env.reset()
                 self.state = 0
 
     def print_value_table(self):
@@ -115,7 +115,7 @@ class Agent:
         return best_action
 
     def play_episode(self, env):
-        env.reset(seed=SEED)
+        env.reset()
         # define reward and state
         reward = 0
         state = 0
