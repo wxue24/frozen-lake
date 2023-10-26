@@ -1,3 +1,8 @@
+# Running the code
+
+1. To run value iteration, `python value_iteration.py`
+2. To run q-learning, `python q_learning.py`
+
 # Frozen Lake Report
 
 Use value iteration to solve the frozen lake, experimenting with slippery set to true vs false, and seed vs no seed.
