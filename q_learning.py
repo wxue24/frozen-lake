@@ -76,7 +76,7 @@ class Agent:
             # Update total_reward using the received reward
             total_reward += reward
             # If the episode ends, break from the loop
-            if terminated:
+            if terminated or truncated:
                 break
             # Otherwise, update the state using the new state
             else:
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         iter_no += 1
         state, action, reward, new_state = agent.sample_env()
         agent.value_update(state, action, reward, new_state)
-        agent.print_values()
+
         cumulative_reward = 0.0
         for _ in range(TEST_EPISODES):
             cumulative_reward += agent.play_episode(test_env)
