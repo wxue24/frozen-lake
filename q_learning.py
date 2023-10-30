@@ -114,7 +114,7 @@ class Agent:
 
 
 if __name__ == "__main__":
-    test_env = gym.make(ENV_NAME)
+    test_env = gym.make(ENV_NAME, is_slippery=SLIPPERY)
     agent = Agent()
     writer = SummaryWriter(comment="-q-learning")
 
